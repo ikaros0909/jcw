@@ -9,7 +9,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GIT_TOKEN = os.getenv('GIT_TOKEN')
 
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
@@ -35,7 +35,7 @@ def generate_witty_comment():
 def get_changed_files(pr_number):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
     headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
+        "Authorization": f"token {GIT_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
     }
     response = requests.get(url, headers=headers)
@@ -50,7 +50,7 @@ def get_changed_files(pr_number):
 def post_comment_to_pr(pr_number, comment):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
     headers = {
-        "Authorization": f"token {GITHUB_TOKEN}",
+        "Authorization": f"token {GIT_TOKEN}",
         "Content-Type": "application/json"
     }
     data = {
