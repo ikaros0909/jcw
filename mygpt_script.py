@@ -9,7 +9,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
-GITHUB_TOKEN = os.getenv('GIT_TOKEN')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
