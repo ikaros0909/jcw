@@ -1,33 +1,41 @@
 import openai
 import os
 import requests
-import json
 
 # OpenAI API 설정
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# GIT API 설정
-GIT_API_URL = "https://api.GITHUB.com"
+# GitHub API 설정
+GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
-GIT_TOKEN = os.getenv('GIT_TOKEN')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
         code = file.read()
     
     response = openai.Completion.create(
-      model="gpt-3.5-turbo-instruct", #text-davinci-004
-      prompt=f"Analyze the following code and provide a detailed review in Korean.:\n{code}",
+      model="text-davinci-004",
+      prompt=f"Analyze the following code and provide a detailed review in Korean:\n{code}",
       max_tokens=500
     )
     
     return response.choices[0].text.strip()
 
+def generate_witty_comment():
+    response = openai.Completion.create(
+      model="text-davinci-004",
+      prompt="Provide a witty comment about coding:",
+      max_tokens=60
+    )
+    
+    return response.choices[0].text.strip()
+
 def get_changed_files(pr_number):
-    url = f"{GIT_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
+    url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
     headers = {
-        "Authorization": f"token {GIT_TOKEN}",
+        "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json"
     }
     response = requests.get(url, headers=headers)
@@ -40,9 +48,9 @@ def get_changed_files(pr_number):
         return []
 
 def post_comment_to_pr(pr_number, comment):
-    url = f"{GIT_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
+    url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
     headers = {
-        "Authorization": f"token {GIT_TOKEN}",
+        "Authorization": f"token {GITHUB_TOKEN}",
         "Content-Type": "application/json"
     }
     data = {
@@ -56,15 +64,20 @@ def post_comment_to_pr(pr_number, comment):
         print(response.json())
 
 if __name__ == "__main__":
-    pr_number = os.getenv('GITHUB_REF').split('/')[-1]  # PR 번호 가져오기
+    # PR 번호 가져오기
+    pr_number = os.getenv('GITHUB_REF').split('/')[-1]
 
+    # 변경된 파일 목록 가져오기
     changed_files = get_changed_files(pr_number)
     comments = []
 
+    # 각 파일에 대해 코드 분석 수행
     for file_path in changed_files:
         code_analysis = analyze_code(file_path)
-        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}")
+        witty_comment = generate_witty_comment()
+        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}\n\n**Witty Comment in Korean**: {witty_comment}")
 
+    # 분석 결과 PR에 코멘트로 추가
     if comments:
         full_comment = "\n\n".join(comments)
         post_comment_to_pr(pr_number, full_comment)
