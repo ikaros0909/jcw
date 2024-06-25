@@ -26,7 +26,7 @@ def analyze_code(file_path):
 def generate_witty_comment():
     response = openai.Completion.create(
       model="text-davinci-004",
-      prompt="Provide a witty comment about coding:",
+      prompt="Provide a witty comment about coding in Korean:",
       max_tokens=60
     )
     
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     for file_path in changed_files:
         code_analysis = analyze_code(file_path)
         witty_comment = generate_witty_comment()
-        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}\n\n**Witty Comment in Korean**: {witty_comment}")
+        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}\n\n**Witty Comment**: {witty_comment}")
 
     # 분석 결과 PR에 코멘트로 추가
     if comments:
