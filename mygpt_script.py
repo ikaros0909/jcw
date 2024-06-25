@@ -17,8 +17,8 @@ def analyze_code(file_path):
         code = file.read()
     
     response = openai.Completion.create(
-      model="text-davinci-004",
-      prompt=f"Analyze the following code and provide a detailed review:\n{code}",
+      model="gpt-3.5-turbo-instruct", #text-davinci-004
+      prompt=f"Analyze the following code and provide a detailed review in Korean.:\n{code}",
       max_tokens=500
     )
     
