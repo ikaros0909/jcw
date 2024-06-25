@@ -9,7 +9,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
-GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
+GITHUB_TOKEN = os.getenv('GIT_TOKEN')
 
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
@@ -26,7 +26,7 @@ def analyze_code(file_path):
 def generate_witty_comment():
     response = openai.Completion.create(
       model="text-davinci-004",
-      prompt="Provide a witty comment about coding:",
+      prompt="Provide a witty comment about coding in Korean:",
       max_tokens=60
     )
     
@@ -57,11 +57,6 @@ def post_comment_to_pr(pr_number, comment):
         "body": comment
     }
     response = requests.post(url, json=data, headers=headers)
-    print(f"Posting comment to PR #{pr_number}")
-    print(f"Request URL: {url}")
-    print(f"Request Headers: {headers}")
-    print(f"Request Data: {data}")
-    print(f"Response Status Code: {response.status_code}")
     if response.status_code == 201:
         print("Comment posted successfully")
     else:
