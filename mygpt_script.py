@@ -23,46 +23,64 @@ REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
+MAX_RETRIES = 3
+
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
         code = file.read()
+
+    retries = 0
+    while retries < MAX_RETRIES:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",  # 모델 이름 수정
+                messages=[
+                    {"role": "system", "content": "You are a code reviewer."},
+                    {"role": "user", "content": f"Analyze the following code and provide a detailed review:\n{code}"}
+                ],
+                max_tokens=500,
+                timeout=15  # 타임아웃 설정 (초)
+            )
+            return response.choices[0].message['content'].strip()
+        except openai.error.RateLimitError as e:
+            print("Rate limit exceeded. Waiting for a minute before retrying...")
+            retries += 1
+            time.sleep(60)  # 1분 대기
+        except openai.error.InvalidRequestError as e:
+            print(f"Invalid request: {e}")
+            return f"Error in analyzing code: {e}"
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return f"Error in analyzing code: {e}"
     
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # 모델 이름 수정
-            messages=[
-                {"role": "system", "content": "You are a code reviewer."},
-                {"role": "user", "content": f"Analyze the following code and provide a detailed review:\n{code}"}
-            ],
-            max_tokens=500
-        )
-        return response.choices[0].message['content'].strip()
-    except openai.error.RateLimitError as e:
-        print("Rate limit exceeded. Waiting for a minute before retrying...")
-        time.sleep(60)  # 1분 대기
-        return analyze_code(file_path)  # 재시도
-    except openai.error.InvalidRequestError as e:
-        print(f"Invalid request: {e}")
-        return f"Error in analyzing code: {e}"
+    return "Failed to analyze code after multiple retries."
 
 def generate_witty_comment():
-    try:
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",  # 모델 이름 수정
-            messages=[
-                {"role": "system", "content": "You are a witty commenter."},
-                {"role": "user", "content": "Provide a witty comment about coding:"}
-            ],
-            max_tokens=60
-        )
-        return response.choices[0].message['content'].strip()
-    except openai.error.RateLimitError as e:
-        print("Rate limit exceeded. Waiting for a minute before retrying...")
-        time.sleep(60)  # 1분 대기
-        return generate_witty_comment()  # 재시도
-    except openai.error.InvalidRequestError as e:
-        print(f"Invalid request: {e}")
-        return f"Error in generating comment: {e}"
+    retries = 0
+    while retries < MAX_RETRIES:
+        try:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",  # 모델 이름 수정
+                messages=[
+                    {"role": "system", "content": "You are a witty commenter."},
+                    {"role": "user", "content": "Provide a witty comment about coding:"}
+                ],
+                max_tokens=60,
+                timeout=15  # 타임아웃 설정 (초)
+            )
+            return response.choices[0].message['content'].strip()
+        except openai.error.RateLimitError as e:
+            print("Rate limit exceeded. Waiting for a minute before retrying...")
+            retries += 1
+            time.sleep(60)  # 1분 대기
+        except openai.error.InvalidRequestError as e:
+            print(f"Invalid request: {e}")
+            return f"Error in generating comment: {e}"
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            return f"Error in generating comment: {e}"
+    
+    return "Failed to generate witty comment after multiple retries."
 
 def get_changed_files(pr_number):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
@@ -71,7 +89,7 @@ def get_changed_files(pr_number):
         "Accept": "application/vnd.github.v3+json"
     }
     print(f"Request URL: {url}")
-    response = requests.get(url, headers=headers)
+    response = requests.get(url, headers=headers, timeout=15)  # 타임아웃 설정 (초)
     print(f"Response Status Code: {response.status_code}")
     if response.status_code == 200:
         files = response.json()
@@ -90,7 +108,7 @@ def post_comment_to_pr(pr_number, comment):
     data = {
         "body": comment
     }
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, json=data, headers=headers, timeout=15)  # 타임아웃 설정 (초)
     print(f"Posting comment to PR #{pr_number}")
     print(f"Request URL: {url}")
     print(f"Request Headers: {headers}")
