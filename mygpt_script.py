@@ -64,65 +64,23 @@ def retry_with_backoff(max_retries=MAX_RETRIES, initial_delay=1):
         return wrapper
     return decorator
 
-def read_file_with_encoding_detection(file_path):
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return file.read()
-    except UnicodeDecodeError:
-        with open(file_path, 'rb') as file:
-            raw_data = file.read()
-            result = chardet.detect(raw_data)
-            encoding = result['encoding']
-            print(f"{file_path} 파일의 인코딩을 감지했습니다: {encoding}")
-            try:
-                return raw_data.decode(encoding)
-            except (UnicodeDecodeError, TypeError):
-                raise ValueError(f"{file_path} 파일을 {encoding} 인코딩으로 읽을 수 없습니다.")
-
 @timeout(TIMEOUT_SECONDS)
 @retry_with_backoff()
-def analyze_code(file_path):
-    try:
-        code = read_file_with_encoding_detection(file_path)
-    except ValueError as e:
-        print(e)
-        return f"파일을 읽을 수 없어 분석을 건너뜁니다: {file_path}"
-    
-    print(f"{file_path} 파일의 코드를 분석 중입니다.")
+def generate_comment():
+    print("코멘트를 생성 중입니다...")
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "당신은 코드 리뷰어입니다."},
-            {"role": "user", "content": f"다음 코드를 분석하고 상세한 리뷰를 제공해 주세요:\n{code}"}
+            {"role": "user", "content": "잘한 점과 개선할 점을 구분하고, 총평을 작성해 주세요. 전체 글자수는 최대 200글자를 넘지 않도록 해주세요."}
         ],
-        max_tokens=500,
+        max_tokens=200,
         timeout=15  # 타임아웃 설정 (초)
     )
     result = response.choices[0].message['content'].strip()
     
     # 모델 결과 검증
-    if "Error" in result or not result:
-        raise ValueError("Invalid analysis result")
-    
-    return result
-
-@timeout(TIMEOUT_SECONDS)
-@retry_with_backoff()
-def generate_witty_comment():
-    print("재치 있는 코멘트를 생성 중입니다...")
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "당신은 재치 있는 댓글 작성자입니다."},
-            {"role": "user", "content": "코딩에 대한 재치 있는 코멘트를 작성해 주세요:"}
-        ],
-        max_tokens=60,
-        timeout=15  # 타임아웃 설정 (초)
-    )
-    result = response.choices[0].message['content'].strip()
-    
-    # 모델 결과 검증
-    if "Error" in result or not result:
+    if not result:
         raise ValueError("Invalid comment result")
     
     return result
@@ -183,18 +141,12 @@ if __name__ == "__main__":
 
         # 변경된 파일 목록 가져오기
         changed_files = get_changed_files(pr_number)
-        comments = []
 
-        # 각 파일에 대해 코드 분석 수행
-        for file_path in changed_files:
-            code_analysis = analyze_code(file_path)
-            witty_comment = generate_witty_comment()
-            comments.append(f"### `{file_path}` 파일 분석\n\n{code_analysis}\n\n**재치 있는 코멘트**: {witty_comment}")
+        # 총평 코멘트 생성
+        full_comment = generate_comment()
 
-        # 분석 결과 PR에 코멘트로 추가
-        if comments:
-            full_comment = "\n\n".join(comments)
-            post_comment_to_pr(pr_number, full_comment)
+        # 생성된 코멘트를 PR에 게시
+        post_comment_to_pr(pr_number, full_comment)
     except TimeoutError as e:
         print(f"프로세스가 타임아웃되었습니다: {e}")
     except Exception as e:
