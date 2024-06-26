@@ -27,7 +27,7 @@ def analyze_code(file_path):
         code = file.read()
     
     response = openai.Completion.create(
-      model="text-davinci-004",
+      model="gpt-3.5-turbo-0125",
       prompt=f"Analyze the following code and provide a detailed review:\n{code}",
       max_tokens=500
     )
@@ -36,7 +36,7 @@ def analyze_code(file_path):
 
 def generate_witty_comment():
     response = openai.Completion.create(
-      model="text-davinci-004",
+      model="gpt-3.5-turbo-0125",
       prompt="Provide a witty comment about coding:",
       max_tokens=60
     )
