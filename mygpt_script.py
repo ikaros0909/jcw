@@ -6,6 +6,13 @@ from dotenv import load_dotenv
 # .env 파일 로드
 load_dotenv()
 
+# 환경 변수 출력 (디버깅용)
+print(f"OPENAI_API_KEY: {os.getenv('OPENAI_API_KEY')}")
+print(f"GITHUB_TOKEN: {os.getenv('GITHUB_TOKEN')}")
+print(f"GITHUB_REPOSITORY_OWNER: {os.getenv('GITHUB_REPOSITORY_OWNER')}")
+print(f"GITHUB_REPOSITORY: {os.getenv('GITHUB_REPOSITORY')}")
+print(f"GITHUB_REF: {os.getenv('GITHUB_REF')}")
+
 # OpenAI API 설정
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
