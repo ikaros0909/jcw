@@ -1,3 +1,4 @@
+import time
 import openai
 import os
 import requests
@@ -26,22 +27,36 @@ def analyze_code(file_path):
     with open(file_path, 'r') as file:
         code = file.read()
     
-    response = openai.Completion.create(
-      model="text-davinci-003",
-      prompt=f"Analyze the following code and provide a detailed review:\n{code}",
-      max_tokens=500
-    )
-    
-    return response.choices[0].text.strip()
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",  # 모델 이름 수정
+            prompt=f"Analyze the following code and provide a detailed review:\n{code}",
+            max_tokens=500
+        )
+        return response.choices[0].text.strip()
+    except openai.error.RateLimitError as e:
+        print("Rate limit exceeded. Waiting for a minute before retrying...")
+        time.sleep(60)  # 1분 대기
+        return analyze_code(file_path)  # 재시도
+    except openai.error.InvalidRequestError as e:
+        print(f"Invalid request: {e}")
+        return f"Error in analyzing code: {e}"
 
 def generate_witty_comment():
-    response = openai.Completion.create(
-      model="text-davinci-003",
-      prompt="Provide a witty comment about coding:",
-      max_tokens=60
-    )
-    
-    return response.choices[0].text.strip()
+    try:
+        response = openai.Completion.create(
+            model="text-davinci-003",  # 모델 이름 수정
+            prompt="Provide a witty comment about coding:",
+            max_tokens=60
+        )
+        return response.choices[0].text.strip()
+    except openai.error.RateLimitError as e:
+        print("Rate limit exceeded. Waiting for a minute before retrying...")
+        time.sleep(60)  # 1분 대기
+        return generate_witty_comment()  # 재시도
+    except openai.error.InvalidRequestError as e:
+        print(f"Invalid request: {e}")
+        return f"Error in generating comment: {e}"
 
 def get_changed_files(pr_number):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
