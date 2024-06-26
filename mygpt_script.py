@@ -75,6 +75,7 @@ def analyze_code(file_path):
             raw_data = file.read()
             result = chardet.detect(raw_data)
             encoding = result['encoding']
+            print(f"{file_path} 파일의 인코딩을 감지했습니다: {encoding}")
             code = raw_data.decode(encoding)
     
     print(f"{file_path} 파일의 코드를 분석 중입니다.")
