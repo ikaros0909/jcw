@@ -28,12 +28,15 @@ def analyze_code(file_path):
         code = file.read()
     
     try:
-        response = openai.Completion.create(
-            model="text-davinci-003",  # 모델 이름 수정
-            prompt=f"Analyze the following code and provide a detailed review:\n{code}",
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # 모델 이름 수정
+            messages=[
+                {"role": "system", "content": "You are a code reviewer."},
+                {"role": "user", "content": f"Analyze the following code and provide a detailed review:\n{code}"}
+            ],
             max_tokens=500
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message['content'].strip()
     except openai.error.RateLimitError as e:
         print("Rate limit exceeded. Waiting for a minute before retrying...")
         time.sleep(60)  # 1분 대기
@@ -44,12 +47,15 @@ def analyze_code(file_path):
 
 def generate_witty_comment():
     try:
-        response = openai.Completion.create(
-            model="text-davinci-003",  # 모델 이름 수정
-            prompt="Provide a witty comment about coding:",
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",  # 모델 이름 수정
+            messages=[
+                {"role": "system", "content": "You are a witty commenter."},
+                {"role": "user", "content": "Provide a witty comment about coding:"}
+            ],
             max_tokens=60
         )
-        return response.choices[0].text.strip()
+        return response.choices[0].message['content'].strip()
     except openai.error.RateLimitError as e:
         print("Rate limit exceeded. Waiting for a minute before retrying...")
         time.sleep(60)  # 1분 대기
