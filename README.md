@@ -1,4 +1,4 @@
 # jcw
 Jinhak Coding Wizard
 
-인공지능 코드리뷰 10
+인공지능 코드리뷰 12
