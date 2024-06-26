@@ -9,7 +9,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
 REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
-GITHUB_TOKEN = os.getenv('GIT_TOKEN')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 def analyze_code(file_path):
     with open(file_path, 'r') as file:
@@ -17,7 +17,7 @@ def analyze_code(file_path):
     
     response = openai.Completion.create(
       model="text-davinci-004",
-      prompt=f"Analyze the following code and provide a detailed review in Korean:\n{code}",
+      prompt=f"Analyze the following code and provide a detailed review:\n{code}",
       max_tokens=500
     )
     
@@ -26,7 +26,7 @@ def analyze_code(file_path):
 def generate_witty_comment():
     response = openai.Completion.create(
       model="text-davinci-004",
-      prompt="Provide a witty comment about coding:",
+      prompt="Provide a witty comment about coding in Korean:",
       max_tokens=60
     )
     
@@ -75,7 +75,7 @@ if __name__ == "__main__":
     for file_path in changed_files:
         code_analysis = analyze_code(file_path)
         witty_comment = generate_witty_comment()
-        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}\n\n**Witty Comment in Korean**: {witty_comment}")
+        comments.append(f"### Analysis of `{file_path}`\n\n{code_analysis}\n\n**Witty Comment**: {witty_comment}")
 
     # 분석 결과 PR에 코멘트로 추가
     if comments:
