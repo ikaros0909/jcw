@@ -5,6 +5,7 @@ import requests
 from dotenv import load_dotenv
 from functools import wraps
 import signal
+import errno
 
 # .env 파일 로드
 load_dotenv()
@@ -27,7 +28,7 @@ GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 MAX_RETRIES = 3
 
-def timeout(seconds=10, error_message=os.strerror(os.errno.ETIME)):
+def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
     def decorator(func):
         def _handle_timeout(signum, frame):
             raise TimeoutError(error_message)
