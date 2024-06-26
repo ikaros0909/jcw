@@ -1,4 +1,4 @@
-name: MyGPT Code Review with Witty Comments
+name: MyGPT Code Review
 
 on:
   pull_request:
@@ -26,7 +26,7 @@ jobs:
     - name: Run MyGPT script
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         source venv/bin/activate
         python mygpt_script.py
