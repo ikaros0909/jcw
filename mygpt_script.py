@@ -72,7 +72,8 @@ def generate_comment():
         model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "당신은 코드 리뷰어입니다."},
-            {"role": "user", "content": "잘한 점과 개선할 점을 구분하고, 총평을 작성해 주세요. 전체 글자수는 최대 200글자를 넘지 않도록 해주세요."}
+            {"role": "user", "content": "버그가 발견되지 않는다면 잘한 점과 개선할 점을 구분하고, 총평을 작성해 주세요. 전체 글자수는 최대 200글자를 넘지 않도록 해주세요."}
+            {"role": "user", "content": "버그나 결함이 발견된다면 최대한 자세하고 구체적으로 처리방안을 제안해주세요."}
         ],
         max_tokens=200,
         timeout=15  # 타임아웃 설정 (초)
