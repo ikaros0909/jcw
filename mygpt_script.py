@@ -64,19 +64,29 @@ def retry_with_backoff(max_retries=MAX_RETRIES, initial_delay=1):
         return wrapper
     return decorator
 
-@timeout(TIMEOUT_SECONDS)
-@retry_with_backoff()
-def analyze_code(file_path):
+def read_file_with_encoding_detection(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
-            code = file.read()
+            return file.read()
     except UnicodeDecodeError:
         with open(file_path, 'rb') as file:
             raw_data = file.read()
             result = chardet.detect(raw_data)
             encoding = result['encoding']
             print(f"{file_path} 파일의 인코딩을 감지했습니다: {encoding}")
-            code = raw_data.decode(encoding)
+            try:
+                return raw_data.decode(encoding)
+            except (UnicodeDecodeError, TypeError):
+                raise ValueError(f"{file_path} 파일을 {encoding} 인코딩으로 읽을 수 없습니다.")
+
+@timeout(TIMEOUT_SECONDS)
+@retry_with_backoff()
+def analyze_code(file_path):
+    try:
+        code = read_file_with_encoding_detection(file_path)
+    except ValueError as e:
+        print(e)
+        return f"파일을 읽을 수 없어 분석을 건너뜁니다: {file_path}"
     
     print(f"{file_path} 파일의 코드를 분석 중입니다.")
     response = openai.ChatCompletion.create(
