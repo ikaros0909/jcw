@@ -4,8 +4,9 @@ import os
 import requests
 from dotenv import load_dotenv
 from functools import wraps
-import signal
+import threading
 import errno
+import chardet
 
 # .env 파일 로드
 load_dotenv()
@@ -23,91 +24,100 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 # GitHub API 설정
 GITHUB_API_URL = "https://api.github.com"
 REPO_OWNER = os.getenv('GITHUB_REPOSITORY_OWNER')
-REPO_NAME = os.getenv('GITHUB_REPOSITORY').split('/')[-1]
+REPO_NAME = os.getenv('GITHUB_REPOSITORY', 'owner/repo').split('/')[-1]
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 MAX_RETRIES = 3
+TIMEOUT_SECONDS = 300
 
 def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
     def decorator(func):
-        def _handle_timeout(signum, frame):
+        def _handle_timeout():
             raise TimeoutError(error_message)
         
         def wrapper(*args, **kwargs):
-            signal.signal(signal.SIGALRM, _handle_timeout)
-            signal.alarm(seconds)
+            timer = threading.Timer(seconds, _handle_timeout)
+            timer.start()
             try:
                 result = func(*args, **kwargs)
             finally:
-                signal.alarm(0)
+                timer.cancel()
             return result
         
         return wraps(func)(wrapper)
     
     return decorator
 
-@timeout(300)
+def retry_with_backoff(max_retries=MAX_RETRIES, initial_delay=1):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except (openai.error.RateLimitError, requests.exceptions.RequestException) as e:
+                    print(f"Error: {e}. Retrying in {delay} seconds...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+            raise Exception(f"Failed to complete the operation after {max_retries} attempts.")
+        return wrapper
+    return decorator
+
+@timeout(TIMEOUT_SECONDS)
+@retry_with_backoff()
 def analyze_code(file_path):
-    with open(file_path, 'r') as file:
-        code = file.read()
-
-    retries = 0
-    while retries < MAX_RETRIES:
-        try:
-            print(f"{file_path} 파일의 코드를 분석 중입니다.")
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "당신은 코드 리뷰어입니다."},
-                    {"role": "user", "content": f"다음 코드를 분석하고 상세한 리뷰를 제공해 주세요:\n{code}"}
-                ],
-                max_tokens=500,
-                timeout=15  # 타임아웃 설정 (초)
-            )
-            return response.choices[0].message['content'].strip()
-        except openai.error.RateLimitError as e:
-            print("레이트 리밋 초과. 1분 후 재시도합니다...")
-            retries += 1
-            time.sleep(60)  # 1분 대기
-        except openai.error.InvalidRequestError as e:
-            print(f"잘못된 요청: {e}")
-            return f"코드 분석 중 오류 발생: {e}"
-        except Exception as e:
-            print(f"예상치 못한 오류 발생: {e}")
-            return f"코드 분석 중 오류 발생: {e}"
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            code = file.read()
+    except UnicodeDecodeError:
+        with open(file_path, 'rb') as file:
+            raw_data = file.read()
+            result = chardet.detect(raw_data)
+            encoding = result['encoding']
+            code = raw_data.decode(encoding)
     
-    return "여러 번의 재시도 후에도 코드 분석에 실패했습니다."
+    print(f"{file_path} 파일의 코드를 분석 중입니다.")
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "당신은 코드 리뷰어입니다."},
+            {"role": "user", "content": f"다음 코드를 분석하고 상세한 리뷰를 제공해 주세요:\n{code}"}
+        ],
+        max_tokens=500,
+        timeout=15  # 타임아웃 설정 (초)
+    )
+    result = response.choices[0].message['content'].strip()
+    
+    # 모델 결과 검증
+    if "Error" in result or not result:
+        raise ValueError("Invalid analysis result")
+    
+    return result
 
-@timeout(300)
+@timeout(TIMEOUT_SECONDS)
+@retry_with_backoff()
 def generate_witty_comment():
-    retries = 0
-    while retries < MAX_RETRIES:
-        try:
-            print("재치 있는 코멘트를 생성 중입니다...")
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "당신은 재치 있는 댓글 작성자입니다."},
-                    {"role": "user", "content": "코딩에 대한 재치 있는 코멘트를 작성해 주세요:"}
-                ],
-                max_tokens=60,
-                timeout=15  # 타임아웃 설정 (초)
-            )
-            return response.choices[0].message['content'].strip()
-        except openai.error.RateLimitError as e:
-            print("레이트 리밋 초과. 1분 후 재시도합니다...")
-            retries += 1
-            time.sleep(60)  # 1분 대기
-        except openai.error.InvalidRequestError as e:
-            print(f"잘못된 요청: {e}")
-            return f"코멘트 생성 중 오류 발생: {e}"
-        except Exception as e:
-            print(f"예상치 못한 오류 발생: {e}")
-            return f"코멘트 생성 중 오류 발생: {e}"
+    print("재치 있는 코멘트를 생성 중입니다...")
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "당신은 재치 있는 댓글 작성자입니다."},
+            {"role": "user", "content": "코딩에 대한 재치 있는 코멘트를 작성해 주세요:"}
+        ],
+        max_tokens=60,
+        timeout=15  # 타임아웃 설정 (초)
+    )
+    result = response.choices[0].message['content'].strip()
     
-    return "여러 번의 재시도 후에도 코멘트 생성에 실패했습니다."
+    # 모델 결과 검증
+    if "Error" in result or not result:
+        raise ValueError("Invalid comment result")
+    
+    return result
 
-@timeout(300)
+@timeout(TIMEOUT_SECONDS)
+@retry_with_backoff()
 def get_changed_files(pr_number):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/pulls/{pr_number}/files"
     headers = {
@@ -123,9 +133,10 @@ def get_changed_files(pr_number):
     else:
         print(f"변경된 파일 목록을 가져오는 데 실패했습니다: {response.status_code}")
         print(response.json())
-        return []
+        raise ValueError("Failed to get changed files")
 
-@timeout(300)
+@timeout(TIMEOUT_SECONDS)
+@retry_with_backoff()
 def post_comment_to_pr(pr_number, comment):
     url = f"{GITHUB_API_URL}/repos/{REPO_OWNER}/{REPO_NAME}/issues/{pr_number}/comments"
     headers = {
@@ -146,6 +157,7 @@ def post_comment_to_pr(pr_number, comment):
     else:
         print(f"코멘트 게시 실패: {response.status_code}")
         print(response.json())
+        raise ValueError("Failed to post comment")
 
 if __name__ == "__main__":
     try:
